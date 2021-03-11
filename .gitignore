@@ -2,3 +2,4 @@ node_modules
 *.json
 *.xlsx
 !config.json
+!package.json
