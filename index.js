@@ -6,9 +6,28 @@ const xlsx = require('xlsx');
 const config = require('./config.json');
 
 const CODES = config.LIST_SAHAM;
-const MONTH_YEAR = config.MONTH_YEAR;
 
-const MAX_RANK = 5;
+const MAX_RANK = config.MAX_RANK;
+
+const formatDate = (d) => {
+  const [day, month, year] = d.split('/');
+  return `${month}/${day}/${year}`;
+}
+
+const sleep = (duration) => {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve()
+    }, duration * 1000)
+  })
+}
+
+const FROM_DATE = moment(
+  new Date(formatDate(config.FROM_DATE))
+);
+const TO_DATE = moment(
+  new Date(formatDate(config.TO_DATE))
+);
 
 const si = [
   { value: 1E3, symbol: "k" },
@@ -27,33 +46,37 @@ const main = async () => {
 
   let result = []
 
-  const days_count = moment(
-    new Date(`${MONTH_YEAR[0]}/01/${MONTH_YEAR[1]}`)
-  ).daysInMonth();
+  let timeoutCount = 0;
 
   for (let CODE of CODES) {
-    for (let i = 1; i <= days_count; i++) {
-      const date = moment(
-        new Date(`${MONTH_YEAR[0]}/${i}/${MONTH_YEAR[1]}`)
-      )
-  
+    for (let i = moment(FROM_DATE); i.diff(TO_DATE, 'days') <= 0; i.add(1, 'days')) {
       // it is in the future!
-      if (moment().diff(date) < 0) {
+      if (moment().diff(i) < 0) {
         continue;
       }
       
       // saturday or sunday, skip
-      if (date.day() === 6 || date.day() === 0) {
+      if (i.day() === 6 || i.day() === 0) {
         continue;
       }
-  
-      let dateResult = await startProcess(CODE, date.format('MM/DD/YYYY'));
-  
+      
+      console.log(`Fetching ${i.format('DD-MM-YYYY')} for ${CODE}`);
+
+      let dateResult = await startProcess(CODE, i.format('MM/DD/YYYY'));
+      
       result.push(dateResult)
+
+      timeoutCount++;
+
+      if (timeoutCount >= 300) {
+        console.log('Waiting for 5 seconds to prevent IP banned')
+        await sleep(5);
+        timeoutCount = 0;
+      }
     }
   }
 
-  fs.writeFileSync(`./${MONTH_YEAR[0]}-${MONTH_YEAR[1]}.json`, JSON.stringify(result));
+  fs.writeFileSync(`./${FROM_DATE.format('DD-MM-YYYY')}-${TO_DATE.format('DD-MM-YYYY')}.json`, JSON.stringify(result));
 
   generateExcel(result);
 
@@ -173,7 +196,7 @@ const generateExcel = (data) => {
     xlsx.utils.book_append_sheet(workbook, sheets, CODE);
   }
 
-  xlsx.writeFile(workbook, `./${MONTH_YEAR[0]}-${MONTH_YEAR[1]}.xlsx`);
+  xlsx.writeFile(workbook, `./${FROM_DATE.format('DD-MM-YYYY')}-${TO_DATE.format('DD-MM-YYYY')}.xlsx`);
 }
 
 main();
