@@ -2,6 +2,5 @@
   "LIST_SAHAM": ["film", "bbca"],
   "FROM_DATE": "01/01/2019",
   "TO_DATE": "01/01/2020",
-  "MONTH_YEAR": [2, 2021],
   "MAX_RANK": 5
 }
