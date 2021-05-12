@@ -62,7 +62,7 @@ const main = async () => {
     for (let CODE of CODES) {
       console.log(`Fetching ${i.format('DD-MM-YYYY')} for ${CODE}`);
 
-      let allBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "all"); // Broker Summary All
+      // let allBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "all"); // Broker Summary All
       let foreignBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "F"); // Broker Summary Foreign
       let domesticBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "D"); // Broker Summary Domestic
 
@@ -75,9 +75,9 @@ const main = async () => {
         "<high>": charting[2],
         "<low>": charting[3],
         "<close>": charting[4],
-        "<volume>": allBrokerSummary.totalBuyLot.value - allBrokerSummary.totalSellLot.value,
-        "<aux1>": domesticBrokerSummary.totalBuyLot.value - domesticBrokerSummary.totalSellLot.value,
-        "<aux2>": foreignBrokerSummary.totalBuyLot.value - foreignBrokerSummary.totalSellLot.value,
+        // "<volume>": allBrokerSummary.totalBuyLot.value - allBrokerSummary.totalSellLot.value,
+        "<volume>": domesticBrokerSummary.totalBuyLot.value - domesticBrokerSummary.totalSellLot.value,
+        "<oi>": foreignBrokerSummary.totalBuyLot.value - foreignBrokerSummary.totalSellLot.value,
       })
 
       timeoutCount++;
