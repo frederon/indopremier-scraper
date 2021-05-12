@@ -82,7 +82,7 @@ const main = async () => {
 
       timeoutCount++;
 
-      if (timeoutCount >= 75) {
+      if (timeoutCount >= 100) {
         console.log('Waiting for 5 seconds to prevent IP banned')
         await sleep(5);
         timeoutCount = 0;
