@@ -3,3 +3,5 @@ node_modules
 *.xlsx
 !config.json
 !package.json
+
+out/*.txt

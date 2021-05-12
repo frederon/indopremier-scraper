@@ -43,54 +43,65 @@ const main = async () => {
     console.log('Please enter CODE name');
     return;
   }
-
-  let result = []
-
+  
   let timeoutCount = 0;
+  
+  for (let i = moment(FROM_DATE); i.diff(TO_DATE, 'days') <= 0; i.add(1, 'days')) {
+    // it is in the future!
+    if (moment().diff(i) < 0) {
+      continue;
+    }
+    
+    // saturday or sunday, skip
+    if (i.day() === 6 || i.day() === 0) {
+      continue;
+    }
 
-  for (let CODE of CODES) {
-    for (let i = moment(FROM_DATE); i.diff(TO_DATE, 'days') <= 0; i.add(1, 'days')) {
-      // it is in the future!
-      if (moment().diff(i) < 0) {
-        continue;
-      }
-      
-      // saturday or sunday, skip
-      if (i.day() === 6 || i.day() === 0) {
-        continue;
-      }
-      
+    let result = []
+    
+    for (let CODE of CODES) {
       console.log(`Fetching ${i.format('DD-MM-YYYY')} for ${CODE}`);
 
-      let dateResult = await startProcess(CODE, i.format('MM/DD/YYYY'));
+      let allBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "all"); // Broker Summary All
+      let foreignBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "F"); // Broker Summary Foreign
+      let domesticBrokerSummary = await getBrokerSummary(CODE, i.format('MM/DD/YYYY'), "D"); // Broker Summary Domestic
+
+      let charting = await getCharting(CODE, i);
       
-      result.push(dateResult)
+      result.push({
+        "<ticker>": CODE.toUpperCase(),
+        "<date>": i.format('MM/DD/YYYY'),
+        "<open>": charting[1],
+        "<high>": charting[2],
+        "<low>": charting[3],
+        "<close>": charting[4],
+        "<volume>": allBrokerSummary.totalBuyLot.value - allBrokerSummary.totalSellLot.value,
+        "<aux1>": domesticBrokerSummary.totalBuyLot.value - domesticBrokerSummary.totalSellLot.value,
+        "<aux2>": foreignBrokerSummary.totalBuyLot.value - foreignBrokerSummary.totalSellLot.value,
+      })
 
       timeoutCount++;
 
-      if (timeoutCount >= 300) {
+      if (timeoutCount >= 75) {
         console.log('Waiting for 5 seconds to prevent IP banned')
         await sleep(5);
         timeoutCount = 0;
       }
     }
+
+    
+    fs.writeFileSync(`./out/${i.format('DD-MM-YYYY')}.txt`, generateCSV(result));
   }
 
-  fs.writeFileSync(`./${FROM_DATE.format('DD-MM-YYYY')}-${TO_DATE.format('DD-MM-YYYY')}.json`, JSON.stringify(result));
-
-  generateExcel(result);
-
-  console.log(">DONE!")  
-
-  return result;
+  console.log(">DONE!")
 }
 
-const startProcess = async (code, date) => {
+const getBrokerSummary = async (code, date, type) => {
   const res = await axios.get(`
-    https://www.indopremier.com/module/saham/include/data-brokersummary.php?code=${code.toLowerCase()}&start=${date}&end=${date}&fd=all&board=all
+    https://www.indopremier.com/module/saham/include/data-brokersummary.php?code=${code.toLowerCase()}&start=${date}&end=${date}&fd=${type}&board=all
   `);
 
-  const data = await extractData(res.data);
+  const data = await extractDataBrokerSummary(res.data);
 
   let result = {
     code,
@@ -101,7 +112,7 @@ const startProcess = async (code, date) => {
   return result
 }
 
-const extractData = async (html) => {
+const extractDataBrokerSummary = async (html) => {
   const $ = cheerio.load(html);
 
   let data = {
@@ -151,6 +162,19 @@ const extractData = async (html) => {
   return data;
 }
 
+const getCharting = async (code, date) => {
+  const res = await axios.get(`
+    https://www.indopremier.com/module/saham/include/json-charting.php?code=${code.toLowerCase()}&start=${moment(date).subtract(1, 'days').format('MM/DD/YYYY')}&end=${date.format('MM/DD/YYYY')}
+  `);
+
+  if (res.data) {
+    // 25200000 = 7 hours / GMT+7
+    return res.data.find(d => d[0] == date.valueOf() + 25200000) || [0, 0, 0, 0, 0, 0]
+  }
+
+  return [0, 0, 0, 0, 0, 0]
+}
+
 const calculateTotalLot = (data) => {
   return data.reduce((sum, d) => {
     let numString = d.lot.replace(/\s/g, '').replace(',', '')
@@ -197,6 +221,18 @@ const generateExcel = (data) => {
   }
 
   xlsx.writeFile(workbook, `./${FROM_DATE.format('DD-MM-YYYY')}-${TO_DATE.format('DD-MM-YYYY')}.xlsx`);
+}
+
+const generateCSV = (json) => {
+  const items = json
+  const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
+  const header = Object.keys(items[0])
+  const csv = [
+    header.join(','), // header row first
+    ...items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+  ].join('\r\n')
+
+  return csv.replace(/\"/g, "");
 }
 
 main();
