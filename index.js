@@ -90,7 +90,7 @@ const main = async () => {
     }
 
     
-    fs.writeFileSync(`./out/${i.format('DD-MM-YYYY')}.txt`, generateCSV(result));
+    fs.writeFileSync(`./out/${i.format('YYYYDDMM')}.txt`, generateCSV(result));
   }
 
   console.log(">DONE!")
