@@ -98,7 +98,7 @@ const main = async () => {
 
 const getBrokerSummary = async (code, date, type) => {
   const res = await axios.get(`
-    https://www.indopremier.com/module/saham/include/data-brokersummary.php?code=${code.toLowerCase()}&start=${date}&end=${date}&fd=${type}&board=all
+    https://www.indopremier.com/module/saham/include/data-brokersummary.php?code=${code.toLowerCase()}&start=${date}&end=${date}&fd=${type}&board=RG
   `);
 
   const data = await extractDataBrokerSummary(res.data);
